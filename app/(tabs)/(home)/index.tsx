@@ -1,14 +1,23 @@
 
-import React from "react";
-import { Stack, Link } from "expo-router";
+import React, { useState, useCallback } from "react";
+import { Stack, Link, router, useFocusEffect } from "expo-router";
 import { ScrollView, Pressable, StyleSheet, View, Text, Platform } from "react-native";
 import { IconSymbol } from "@/components/IconSymbol";
 import { colors, commonStyles } from "@/styles/commonStyles";
-import { samplePlayers } from "@/data/samplePlayers";
+import { playerManager } from "@/utils/playerManager";
 import { Player } from "@/types/Player";
 
 export default function HomeScreen() {
-  console.log('HomeScreen rendered with', samplePlayers.length, 'players');
+  const [players, setPlayers] = useState<Player[]>([]);
+
+  // Refresh players when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      const allPlayers = playerManager.getAllPlayers();
+      setPlayers(allPlayers);
+      console.log('HomeScreen refreshed with', allPlayers.length, 'players');
+    }, [])
+  );
 
   const getHealthPercentage = (player: Player) => {
     return (player.healthPoints.current / player.healthPoints.max) * 100;
@@ -87,7 +96,10 @@ export default function HomeScreen() {
 
   const renderHeaderRight = () => (
     <Pressable
-      onPress={() => console.log('Add player pressed')}
+      onPress={() => {
+        console.log('Add player pressed');
+        router.push('/add-player');
+      }}
       style={styles.headerButtonContainer}
     >
       <IconSymbol name="plus" color={colors.primary} />
@@ -130,9 +142,26 @@ export default function HomeScreen() {
             </Text>
           </View>
           
-          <View style={styles.playersContainer}>
-            {samplePlayers.map(renderPlayer)}
-          </View>
+          {players.length > 0 ? (
+            <View style={styles.playersContainer}>
+              {players.map(renderPlayer)}
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <IconSymbol name="person.3" color={colors.textSecondary} size={64} />
+              <Text style={styles.emptyStateTitle}>No Players Yet</Text>
+              <Text style={styles.emptyStateText}>
+                Tap the + button to add your first player to the party!
+              </Text>
+              <Pressable 
+                style={styles.addPlayerButton}
+                onPress={() => router.push('/add-player')}
+              >
+                <IconSymbol name="plus" color={colors.card} size={20} />
+                <Text style={styles.addPlayerButtonText}>Add First Player</Text>
+              </Pressable>
+            </View>
+          )}
         </ScrollView>
       </View>
     </>
@@ -247,5 +276,41 @@ const styles = StyleSheet.create({
   },
   headerButtonContainer: {
     padding: 6,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 64,
+    paddingHorizontal: 32,
+  },
+  emptyStateTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: colors.text,
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  addPlayerButton: {
+    backgroundColor: colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  addPlayerButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.card,
   },
 });

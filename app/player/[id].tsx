@@ -1,17 +1,26 @@
 
-import React from "react";
+import React, { useState, useCallback } from "react";
 import { ScrollView, View, Text, StyleSheet, Pressable, Platform } from "react-native";
-import { useLocalSearchParams, Stack, router } from "expo-router";
+import { useLocalSearchParams, Stack, router, useFocusEffect } from "expo-router";
 import { IconSymbol } from "@/components/IconSymbol";
 import { colors, commonStyles } from "@/styles/commonStyles";
-import { samplePlayers } from "@/data/samplePlayers";
+import { playerManager } from "@/utils/playerManager";
 import { Player, Item } from "@/types/Player";
 
 export default function PlayerDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const player = samplePlayers.find(p => p.id === id);
+  const [player, setPlayer] = useState<Player | null>(null);
 
-  console.log('PlayerDetailScreen rendered for player ID:', id);
+  // Refresh player data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (id) {
+        const foundPlayer = playerManager.getPlayerById(id);
+        setPlayer(foundPlayer || null);
+        console.log('PlayerDetailScreen refreshed for player ID:', id);
+      }
+    }, [id])
+  );
 
   if (!player) {
     return (
@@ -160,12 +169,14 @@ export default function PlayerDetailScreen() {
           </View>
 
           {/* Backstory Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Backstory</Text>
-            <View style={styles.backstoryCard}>
-              <Text style={styles.backstoryText}>{player.backstory}</Text>
+          {player.backstory && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Backstory</Text>
+              <View style={styles.backstoryCard}>
+                <Text style={styles.backstoryText}>{player.backstory}</Text>
+              </View>
             </View>
-          </View>
+          )}
 
           {/* Inventory Section */}
           <View style={styles.section}>
@@ -173,7 +184,14 @@ export default function PlayerDetailScreen() {
               Inventory ({player.items.reduce((total, item) => total + item.quantity, 0)} items)
             </Text>
             <View style={styles.inventoryContainer}>
-              {player.items.map(renderItem)}
+              {player.items.length > 0 ? (
+                player.items.map(renderItem)
+              ) : (
+                <View style={styles.emptyInventory}>
+                  <IconSymbol name="bag" color={colors.textSecondary} size={48} />
+                  <Text style={styles.emptyInventoryText}>No items in inventory</Text>
+                </View>
+              )}
             </View>
           </View>
         </ScrollView>
@@ -320,6 +338,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: colors.text,
+  },
+  emptyInventory: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 32,
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.accent,
+  },
+  emptyInventoryText: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    marginTop: 12,
   },
   errorText: {
     fontSize: 18,
